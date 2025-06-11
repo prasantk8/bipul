@@ -1,34 +1,36 @@
-flowchart TD
-    subgraph API Layer
-      A[Auth Service] --> B[Rate Limiter]
-      B --> C[Request Validator]
-      C --> D[Model Router]
+```mermaid
+graph TD
+    subgraph "Ingestion & Input"
+      A1[User / External Event] --> A2[API Gateway / Pre-Filter]
+      A2 --> A3[Input Guardrails (PII/Injection Filter)]
     end
 
-    subgraph Retrieval Layer
-      D --> R1[Vector DB (Pinecone)]
-      D --> R2[SQL DB / Graph DB]
-      R1 & R2 --> E[Re-Ranker (MiniLM Cross-Encoder)]
+    subgraph "Core Processing"
+      A3 --> B1[Context Construction]
+      B1 --> B2[RAG Retriever / KB Fetch]
+      B2 --> B3[Tool Controller (API Calls, Python, SQL)]
+      B1 --> B4[Prompt Assembler]
+      B3 --> B4[Prompt Assembler]
+      B4 --> B5[LLM Inference]
+      B5 --> B6[Output Guardrails (Schema, Safety Check)]
     end
 
-    subgraph Inference Layer
-      E --> M1[7B LLM (8-bit)]
-      E --> M2[13B LLM (4-bit+LoRA)]
-      E --> M3[70B LLM (INT8+FlashAttn)]
-      M1 & M2 & M3 --> O[Post-Processor]
+    subgraph "Post-Processing & Actions"
+      B6 --> C1[Action Executor (DB writes, notifications)]
+      B6 --> C2[Response to User]
     end
 
-    subgraph Tool Layer
-      O --> T1[Market Data API]
-      O --> T2[Python Sandbox]
-      O --> T3[SQL Engine]
-      T1 & T2 & T3 --> O
+    subgraph "Observability & Feedback"
+      C2 --> D1[Usage Telemetry (latency, tokens)]
+      B6 --> D1
+      D1 --> D2[Dashboards & Alerts]
+      C2 --> D3[User Feedback (explicit/implicit)]
+      D3 --> D4[Feedback Processor]
+      D4 --> B1
     end
 
-    subgraph Feedback & Monitoring
-      O --> F1[Telemetry Collector]
-      O --> F2[Explicit Feedback UI]
-      F1 & F2 --> G[Feedback Aggregator]
-      G --> H[Data Pipeline / RAG Index]
-      G --> I[Prompt / Model Adjustment Pipeline]
+    subgraph "CI/CD & Governance"
+      E1[Code / Prompt Change] --> E2[Evaluation Pipeline (Chaps 3–9)]
+      E2 --> E3[Approval / Rollout]
+      E3 --> A2
     end
